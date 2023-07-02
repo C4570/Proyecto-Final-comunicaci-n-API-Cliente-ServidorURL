@@ -4,15 +4,16 @@ from fastapi.responses import HTMLResponse
 import uuid
 
 app = FastAPI()
-## Experimental
-def search_recipe_id(recipe_name: str):
+
+def update_recipe(updated_recipe: dict):
     with open("recipes.json", "r") as f:
         recipes = json.load(f)
-        for recipe in recipes:
-            if recipe["id"].lower() == recipe_name.lower():
-                return recipe
-    return None
-##
+    for i, recipe in enumerate(recipes):
+        if recipe["id"].lower() == updated_recipe["id"].lower():
+            recipes[i] = updated_recipe
+            break
+    with open("recipes.json", "w") as f:
+        json.dump(recipes, f)
 
 def search_recipe(recipe_name: str):
     with open("recipes.json", "r") as f:
@@ -119,10 +120,9 @@ async def read_item(request: Request):
                         <li>Preparación: {recipe["times"]["Preparation"]}</li>
                         <li>Cocción: {recipe["times"]["Cooking"]}</li>
                     </ul>
-                    <form action="/change_recipe/{recipe["id"]}">  
+                    <form action="/change/{recipe["name"]}" method="get">  
                             <button>Modificar Receta</button>  
                     </form>
-
                 </body>
             </html>
         '''
@@ -198,32 +198,72 @@ async def create_recipe(request: Request):
     return HTMLResponse(content="<h1>Receta agregada con éxito</h1>", status_code=200)
 
  #####  Experimental
-@app.get("/change_recipe", response_class=HTMLResponse)
-async def create_recipe_from(request: Request):
-    form_data = await request.form()
-    name = form_data["name"]
+@app.post("/change/{name}", response_class=HTMLResponse)
+async def read_item(name):
     recipe = search_recipe(name)
-    html_content = '''
-        <html>
-            <head>
-                <title>Modificar Receta</title>
-            </head>
-            <body>
-                <h1>Modificar Receta</h1>
-                    <form action="/change_recipe" method="post">
-                    Autor: <input type="text" name="author" placeholder=">
-                    <input type="submit" value="Enviar">
-                    </form>
-            </body>
-        </html>
+    if recipe:
+        ingredients_list = "".join([f"<li>{ingredient}</li>" for ingredient in recipe["ingredients"]])
+        html_content = f'''
+            <html>
+                <head>
+                    <title>T.P. Final</title>
+                </head>
+                <body>
+                    <form action="/change/" method="post">
+                        <input type="hidden" name="id" value={recipe["id"]}>
+                        <p>{recipe["url"]}</p>
+                        URL Nueva:<br><input type="text" name="url"><br><br>
+                        <p>{recipe["image"]}</p>
+                        Imagen:<br><input type="text" name="image"><br><br>
+                        <p>{recipe["name"]}</p>
+                        Nombre:<br><input type="text" name="name"><br><br>
+                        <p>{recipe["description"]}</p>
+                        Descripción:<br><input type="text" name="description"><br><br>
+                        <p>{recipe["author"]}</p>
+                        Autor:<br><input type="text" name="author"><br><br>
+                        <p>{ingredients_list}</p>
+                        Ingredientes (separados por comas):<br><input type="text" name="ingredients"><br><br>
+                        <p>{recipe["steps"]}</p>
+                        Pasos (separados por comas):<br><input type="text" name="steps"><br><br>
+                        <p>{recipe["nutrients"]}</p>
+                        Nutrientes (kcal, fat, saturates, carbs, sugars, fibre, protein, salt):<br><input type="text" name="nutrients"><br><br>
+                        <p>{recipe["times"]}</p>
+                        Tiempos (Preparación, Cocción):<br><input type="text" name="times"><br><br>
+                        <p>{recipe["serves"]}</p>
+                        Porciones:<br><input type="number" name="serves"><br><br>
+                        <p>{recipe["difficult"]}</p>
+                        Dificultad:<br><input type="text" name="difficult"><br><br>
+                        <p>{recipe["vote_count"]}</p>
+                        Vote count:<br><input type="number" name="vote_count"><br><br>
+                        <p>{recipe["subcategory"]}</p>
+                        Subcategoría:<br><input type="text" name="subcategory"><br><br>
+                        <p>{recipe["dish_type"]}</p>
+                        Tipo de plato:<br><input type="text" name="dish_type"><br><br>
+                        <p>{recipe["maincategory"]}</p>
+                        Categoría principal:<br><input type="text" name="maincategory"><br><br>
+                        <input type="submit" value="Modificar">
+                    </form>     
+            </html>
+        '''
+        return HTMLResponse(content=html_content, status_code=200)
+    else:
+        html_content = f'''
+            <html>
+                <head>
+                    <title>T.P. Final</title>
+                </head>
+                <body>
+                    <h2>Lo siento, no se encontró la receta para {name}</h2>
+                </body>
+            </html>
         '''
     return HTMLResponse(content=html_content, status_code=200)
+
 @app.post("/change_recipe/", response_class=HTMLResponse)
 async def change_recipe(request: Request):
-    
     form_data = await request.form()
     recipe = {
-        
+        "id": form_data["id"],
         "url": form_data["url"],
         "image": form_data["image"],
         "name": form_data["name"],
@@ -241,5 +281,5 @@ async def change_recipe(request: Request):
         "dish_type": form_data["dish_type"],
         "maincategory": form_data["maincategory"]
     }
-    add_recipe(recipe)
+    update_recipe(recipe)
     return HTMLResponse(content="<h1>Receta modificada con éxito</h1>", status_code=200)
