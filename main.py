@@ -4,19 +4,19 @@ from fastapi.responses import HTMLResponse
 import uuid
 
 app = FastAPI()
-
+PATH = "recipes.json"
 def update_recipe(updated_recipe: dict):
-    with open("recipes.json", "r") as f:
+    with open(PATH, "r") as f:
         recipes = json.load(f)
     for i, recipe in enumerate(recipes):
-        if recipe["id"].lower() == updated_recipe["id"].lower():
+        if recipe["name"].lower() == updated_recipe["name"].lower():
             recipes[i] = updated_recipe
             break
-    with open("recipes.json", "w") as f:
+    with open(PATH, "w") as f:
         json.dump(recipes, f)
 
 def search_recipe(recipe_name: str):
-    with open("recipes.json", "r") as f:
+    with open(PATH, "r") as f:
         recipes = json.load(f)
         for recipe in recipes:
             if recipe["name"].lower() == recipe_name.lower():
@@ -24,10 +24,10 @@ def search_recipe(recipe_name: str):
     return None
 
 def add_recipe(recipe: dict):
-    with open("recipes.json", "r") as f:
+    with open(PATH, "r") as f:
         recipes = json.load(f)
     recipes.append(recipe)
-    with open("recipes.json", "w") as f:
+    with open(PATH, "w") as f:
         json.dump(recipes, f)
         
 @app.get("/", response_class=HTMLResponse)
@@ -120,7 +120,7 @@ async def read_item(request: Request):
                         <li>Preparación: {recipe["times"]["Preparation"]}</li>
                         <li>Cocción: {recipe["times"]["Cooking"]}</li>
                     </ul>
-                    <form action="/change/{recipe["name"]}" method="get">  
+                    <form action="/change/{recipe["name"]}" method="post">  
                             <button>Modificar Receta</button>  
                     </form>
                 </body>
@@ -198,7 +198,7 @@ async def create_recipe(request: Request):
     return HTMLResponse(content="<h1>Receta agregada con éxito</h1>", status_code=200)
 
  #####  Experimental
-@app.post("/change/{name}", response_class=HTMLResponse)
+@app.post("/change/{name}")
 async def read_item(name):
     recipe = search_recipe(name)
     if recipe:
@@ -209,7 +209,7 @@ async def read_item(name):
                     <title>T.P. Final</title>
                 </head>
                 <body>
-                    <form action="/change/" method="post">
+                    <form action="/change_recipe/" method="post">
                         <input type="hidden" name="id" value={recipe["id"]}>
                         <p>{recipe["url"]}</p>
                         URL Nueva:<br><input type="text" name="url"><br><br>
@@ -221,6 +221,8 @@ async def read_item(name):
                         Descripción:<br><input type="text" name="description"><br><br>
                         <p>{recipe["author"]}</p>
                         Autor:<br><input type="text" name="author"><br><br>
+                        <p>{recipe["rattings"]}</p>
+                        Rattings:<br><input type="number" name="rattings"><br><br>
                         <p>{ingredients_list}</p>
                         Ingredientes (separados por comas):<br><input type="text" name="ingredients"><br><br>
                         <p>{recipe["steps"]}</p>
@@ -283,3 +285,4 @@ async def change_recipe(request: Request):
     }
     update_recipe(recipe)
     return HTMLResponse(content="<h1>Receta modificada con éxito</h1>", status_code=200)
+
